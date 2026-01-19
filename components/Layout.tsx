@@ -17,28 +17,17 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, lang, setLang, theme, setTheme, currentPage, setCurrentPage }) => {
   const t = translations[lang];
   const [scrolled, setScrolled] = useState(false);
-  const [cookieConsent, setCookieConsent] = useState<boolean | null>(null);
-  const [showCookieSettings, setShowCookieSettings] = useState(false);
-  const [tempConsent, setTempConsent] = useState({ necessary: true, analytics: false, marketing: false });
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
-    
-    const consent = localStorage.getItem('nordin_cookies_v2');
-    if (consent) {
-      setCookieConsent(true);
-      setTempConsent(JSON.parse(consent));
-    }
-    
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const saveConsent = (preferences = tempConsent) => {
-    localStorage.setItem('nordin_cookies_v2', JSON.stringify(preferences));
-    setCookieConsent(true);
-    setShowCookieSettings(false);
-  };
+  useEffect(() => {
+    document.body.style.overflow = isMenuOpen ? 'hidden' : 'unset';
+  }, [isMenuOpen]);
 
   const navItems = [
     { id: 'home', label: t.navHome },
@@ -47,38 +36,33 @@ const Layout: React.FC<LayoutProps> = ({ children, lang, setLang, theme, setThem
     { id: 'contact', label: t.navContact },
   ];
 
+  const handleNavClick = (id: string) => {
+    setCurrentPage(id);
+    setIsMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div className="min-h-screen flex flex-col selection:bg-amber-500 selection:text-slate-900 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
-      {/* Navigation */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-md py-4 shadow-xl border-b border-black/5 dark:border-white/5' : 'bg-transparent py-6'}`}>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 overflow-x-hidden">
+      <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${scrolled || isMenuOpen ? 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-md py-4 shadow-xl border-b border-black/5' : 'bg-transparent py-6'}`}>
         <div className="container mx-auto px-6 flex justify-between items-center">
-          <div 
-            className="text-2xl font-bold tracking-tighter flex items-center gap-2 cursor-pointer group"
-            onClick={() => setCurrentPage('home')}
-          >
-            <div className="w-8 h-8 accent-gradient rounded flex items-center justify-center text-white group-hover:rotate-12 transition-transform shadow-lg shadow-amber-500/20">N</div>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">NOR DIN</span>
+          <div className="text-xl md:text-2xl font-black tracking-tighter flex items-center gap-2 cursor-pointer z-[110]" onClick={() => handleNavClick('home')}>
+            <div className="w-8 h-8 accent-gradient rounded flex items-center justify-center text-white shadow-lg">N</div>
+            <span>NOR DIN</span>
           </div>
 
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-10">
             {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setCurrentPage(item.id)}
-                className={`text-sm font-semibold tracking-wide transition-colors uppercase ${currentPage === item.id ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
-              >
-                {item.label}
-              </button>
+              <button key={item.id} onClick={() => handleNavClick(item.id)} className={`text-sm font-bold uppercase tracking-widest transition-colors ${currentPage === item.id ? 'text-amber-500' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}>{item.label}</button>
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Theme Toggle */}
-            <button 
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-full border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
-              title="Toggle Theme"
-            >
+          <div className="flex items-center gap-3 z-[110]">
+            <button onClick={() => setLang(lang === 'hr' ? 'en' : 'hr')} className="hidden sm:flex px-4 py-1.5 rounded-full border border-black/10 dark:border-white/10 text-[10px] font-black tracking-widest hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all uppercase">
+              {lang === 'hr' ? 'English' : 'Hrvatski'}
+            </button>
+            
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-2.5 rounded-full border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 transition-all">
               {theme === 'dark' ? (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z" /></svg>
               ) : (
@@ -86,124 +70,66 @@ const Layout: React.FC<LayoutProps> = ({ children, lang, setLang, theme, setThem
               )}
             </button>
 
-            {/* Lang Toggle */}
-            <button 
-              onClick={() => setLang(lang === 'hr' ? 'en' : 'hr')}
-              className="px-3 py-1 rounded-full border border-black/10 dark:border-white/20 text-xs font-bold hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all uppercase"
-            >
-              {lang === 'hr' ? 'EN' : 'HR'}
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-black/5">
+              <div className="w-6 h-5 relative flex flex-col justify-between">
+                <span className={`w-full h-0.5 bg-current rounded-full transition-all ${isMenuOpen ? 'rotate-45 translate-x-1' : ''}`}></span>
+                <span className={`w-full h-0.5 bg-current rounded-full transition-all ${isMenuOpen ? 'opacity-0' : ''}`}></span>
+                <span className={`w-full h-0.5 bg-current rounded-full transition-all ${isMenuOpen ? '-rotate-45 translate-x-1' : ''}`}></span>
+              </div>
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="flex-grow pt-24 md:pt-32">
-        {children}
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-slate-100 dark:bg-slate-900/50 border-t border-black/5 dark:border-white/5 py-12 mt-20 transition-colors">
-        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
-          <div>
-            <div className="text-xl font-bold mb-4">NOR DIN</div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-xs">
-              Vrhunska gradnja i inženjering u srcu Zagreba. Tradicija, kvaliteta i inovacija prema EU standardima.
-            </p>
+      <div className={`fixed inset-0 z-[90] lg:hidden transition-all duration-700 ease-[cubic-bezier(0.85,0,0.15,1)] ${isMenuOpen ? 'translate-y-0' : '-translate-y-full'}`}>
+        <div className="absolute inset-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur-3xl"></div>
+        <div className="relative h-full flex flex-col items-center justify-center p-8 space-y-10">
+          {navItems.map((item, i) => (
+            <button key={item.id} onClick={() => handleNavClick(item.id)} className={`text-4xl font-black uppercase tracking-tighter transition-all ${currentPage === item.id ? 'text-amber-500 scale-110' : 'text-slate-400 dark:text-slate-600'}`}>
+              {item.label}
+            </button>
+          ))}
+          <div className="pt-12 flex flex-col items-center gap-6">
+            <button onClick={() => { setLang(lang === 'hr' ? 'en' : 'hr'); setIsMenuOpen(false); }} className="px-10 py-4 rounded-[2rem] accent-gradient text-white font-black text-sm tracking-widest shadow-2xl">
+              {lang === 'hr' ? 'SWITCH TO ENGLISH' : 'PREBACI NA HRVATSKI'}
+            </button>
+            <p className="text-[10px] font-black tracking-[0.4em] opacity-40 uppercase">Zagreb • 2025</p>
           </div>
-          <div>
-            <h4 className="font-bold mb-4 uppercase text-sm tracking-widest text-amber-500">Legal</h4>
-            <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-              <li><button onClick={() => setCurrentPage('privacy')} className="hover:text-amber-500 transition-colors">{t.navPrivacy}</button></li>
-              <li>GDPR / GDPR (EU 2016/679)</li>
-              <li><button onClick={() => { setCookieConsent(false); setShowCookieSettings(true); }} className="hover:text-amber-500 transition-colors">Manage Cookies</button></li>
+        </div>
+      </div>
+
+      <main className="flex-grow pt-24 md:pt-32">{children}</main>
+
+      <footer className="bg-slate-50 dark:bg-slate-950 border-t border-black/5 py-16 md:py-24">
+        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
+          <div className="space-y-6">
+            <div className="text-2xl font-black tracking-tighter">NOR DIN</div>
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed font-medium">Lideri u modernom inženjerstvu. Transformiramo vizije u landmarke Zagreba.</p>
+          </div>
+          <div className="space-y-6">
+            <h4 className="font-black uppercase text-[10px] tracking-[0.3em] text-amber-500">Legal</h4>
+            <ul className="space-y-4 text-sm text-slate-500 font-bold uppercase tracking-wider">
+              <li><button onClick={() => handleNavClick('privacy')} className="hover:text-amber-500 transition-colors">{t.navPrivacy}</button></li>
+              <li>GDPR • {lang === 'hr' ? 'Pravila' : 'Terms'}</li>
             </ul>
           </div>
-          <div>
-            <h4 className="font-bold mb-4 uppercase text-sm tracking-widest text-amber-500">Contact</h4>
-            <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-              <li>Ilica 100, 10000 Zagreb</li>
+          <div className="space-y-6">
+            <h4 className="font-black uppercase text-[10px] tracking-[0.3em] text-amber-500">Office</h4>
+            <ul className="space-y-4 text-sm text-slate-500 font-bold uppercase tracking-wider">
+              <li>Ilica 100, Zagreb</li>
               <li>+385 1 234 5678</li>
-              <li>info@nordin-zagreb.hr</li>
             </ul>
           </div>
         </div>
-        <div className="container mx-auto px-6 mt-12 pt-8 border-t border-black/5 dark:border-white/5 flex flex-col md:flex-row justify-between items-center text-xs text-slate-400 gap-4">
-          <p>&copy; 2025 Nor Din Construction. {t.footerRights}</p>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-amber-500 transition-colors">LinkedIn</a>
-            <a href="#" className="hover:text-amber-500 transition-colors">Instagram</a>
+        <div className="container mx-auto px-6 mt-16 pt-10 border-t border-black/5 flex flex-col md:flex-row justify-between items-center text-[9px] uppercase tracking-[0.4em] text-slate-400 font-black gap-6">
+          <p>&copy; 2025 Nor Din. {t.footerRights}</p>
+          <div className="flex gap-10">
+            <a href="#" className="hover:text-amber-500">LinkedIn</a>
+            <a href="#" className="hover:text-amber-500">Instagram</a>
           </div>
         </div>
       </footer>
-
-      {/* AI Chat Widget */}
       <ChatWidget lang={lang} />
-
-      {/* Enhanced Cookie Consent Banner */}
-      {!cookieConsent && (
-        <div className="fixed inset-x-0 bottom-0 z-[100] p-6 animate-bounce-in">
-          <div className="max-w-4xl mx-auto glass-card p-8 rounded-3xl shadow-2xl border-amber-500/20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl">
-            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-              <div className="flex-grow">
-                <h4 className="text-xl font-bold mb-2">Cookie Preferences</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {t.cookieTitle} This website uses cookies to provide technical functionality, analyze traffic, and support marketing activities in accordance with EU regulations.
-                </p>
-                {showCookieSettings && (
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in">
-                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
-                      <input type="checkbox" checked disabled className="rounded border-amber-500 text-amber-500 focus:ring-amber-500" />
-                      Strictly Necessary
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={tempConsent.analytics} 
-                        onChange={e => setTempConsent({...tempConsent, analytics: e.target.checked})}
-                        className="rounded border-amber-500 text-amber-500 focus:ring-amber-500" 
-                      />
-                      Analytics
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={tempConsent.marketing} 
-                        onChange={e => setTempConsent({...tempConsent, marketing: e.target.checked})}
-                        className="rounded border-amber-500 text-amber-500 focus:ring-amber-500" 
-                      />
-                      Marketing
-                    </label>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full md:w-auto">
-                {!showCookieSettings && (
-                  <button 
-                    onClick={() => setShowCookieSettings(true)}
-                    className="px-6 py-3 rounded-xl border border-black/10 dark:border-white/10 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                  >
-                    Settings
-                  </button>
-                )}
-                <button 
-                  onClick={() => saveConsent({ necessary: true, analytics: true, marketing: true })}
-                  className="px-6 py-3 rounded-xl accent-gradient text-white text-sm font-bold shadow-xl shadow-amber-500/20"
-                >
-                  Accept All
-                </button>
-                {showCookieSettings && (
-                  <button 
-                    onClick={() => saveConsent()}
-                    className="px-6 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-sm font-bold shadow-xl transition-transform hover:scale-105"
-                  >
-                    Save Selection
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
